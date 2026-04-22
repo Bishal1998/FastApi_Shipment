@@ -91,6 +91,27 @@ def update_shipment(id :int, weight : float, content: str, status: str) -> dict[
     shipment["status"] = status
 
     return {"message": f"Shipment with id {id} updated successfully"}
+    
+@app.patch("/shipment/{id}")
+def patch_update_shipment(id : int, weight : float | None = None, content: str | None = None, status: str | None = None) -> dict[str, Any]:
+
+    shipment = next((s for s in shipments if s["id"] == id), None)
+
+    if not shipment:
+        raise HTTPException(status_code=404, detail=f"Shipment with id {id} not found")
+
+    if weight:
+        if weight > 25:
+            raise HTTPException(status_code=406, detail="Maximum allowed weight is 25 kg.")
+        shipment["weight"] = weight
+
+    if content:
+        shipment["content"] = content
+
+    if status:
+        shipment["status"] = status
+
+    return {"message": f"Shipment with id {id} updated successfully"}
 
 @app.get("/")
 def get_root():
