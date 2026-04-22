@@ -91,7 +91,7 @@ def update_shipment(id :int, weight : float, content: str, status: str) -> dict[
     shipment["status"] = status
 
     return {"message": f"Shipment with id {id} updated successfully"}
-    
+
 @app.patch("/shipment/{id}")
 def patch_update_shipment(id : int, weight : float | None = None, content: str | None = None, status: str | None = None) -> dict[str, Any]:
 
@@ -112,6 +112,17 @@ def patch_update_shipment(id : int, weight : float | None = None, content: str |
         shipment["status"] = status
 
     return {"message": f"Shipment with id {id} updated successfully"}
+
+@app.delete("/shipment/{id}")
+def delete_shipment(id : int) -> dict[str, Any]:
+    shipment = next((s for s in shipments if s["id"] == id), None)
+
+    if not shipment:
+        raise HTTPException(status_code=404, detail=f"Shipment with id {id} not found")
+
+    shipments.remove(shipment)
+
+    return {"message": f"Shipment with id {id} deleted successfully"}
 
 @app.get("/")
 def get_root():
