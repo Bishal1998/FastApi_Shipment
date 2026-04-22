@@ -56,6 +56,26 @@ def get_shipment(id:int) -> dict[str, Any]:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Shipment with id {id} not found")
     return shipment
 
+@app.post("/shipment")
+def create_shipment(data : dict) -> dict[str, Any]:
+
+    weight = data["weight"]
+    content = data["content"]
+
+    if weight > 25:
+        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="Maximum allowed weight is 25 kg.")
+
+    new_id = shipments[-1]["id"] + 1
+
+    shipments.append({
+        "id": new_id,
+        "weight": weight,
+        "content": content,
+        "status": "Placed"
+    })
+
+    return {"id": new_id, "message": "Shipment created successfully"}
+
 @app.get("/")
 def get_root():
     return {"message": "Hello, World!"}
