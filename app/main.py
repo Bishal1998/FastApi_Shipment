@@ -76,6 +76,22 @@ def create_shipment(data : dict) -> dict[str, Any]:
 
     return {"id": new_id, "message": "Shipment created successfully"}
 
+@app.put("/shipment/{id}")
+def update_shipment(id :int, weight : float, content: str, status: str) -> dict[str, Any]:
+    shipment = next((s for s in shipments if s["id"] == id), None)
+
+    if not shipment:
+        raise HTTPException(status_code=404, detail=f"Shipment with id {id} not found")
+
+    if weight > 25:
+        raise HTTPException(status_code=406, detail="Maximum allowed weight is 25 kg.")
+
+    shipment["weight"] = weight
+    shipment["content"] = content
+    shipment["status"] = status
+
+    return {"message": f"Shipment with id {id} updated successfully"}
+
 @app.get("/")
 def get_root():
     return {"message": "Hello, World!"}
