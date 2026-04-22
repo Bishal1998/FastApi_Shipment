@@ -3,6 +3,7 @@ from scalar_fastapi import get_scalar_api_reference
 
 app = FastAPI()
 
+        "content": "Books",
 @app.get("/")
 def get_root():
     return {"message": "Hello, World!"}
