@@ -1,5 +1,5 @@
 from typing import Any
-from fastapi import FastAPI
+from fastapi import FastAPI, status, HTTPException
 from scalar_fastapi import get_scalar_api_reference
 
 app = FastAPI()
@@ -48,15 +48,13 @@ def get_latest_shipment() -> dict[str, Any]:
     latest = shipments[-1]
     return latest
 
-
 @app.get("/shipment/{id}")
 def get_shipment(id:int) -> dict[str, Any]:
-    for shipment in shipments:
-        if shipment["id"] == id:
-            shipment_found =  shipment
-        else:
-            shipment_found = {"error": "Shipment not found"}
-    return shipment_found
+    shipment = next((s for s in shipments if s["id"] == id), None)
+
+    if not shipment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Shipment with id {id} not found")
+    return shipment
 
 @app.get("/")
 def get_root():
