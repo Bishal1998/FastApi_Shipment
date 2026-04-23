@@ -2,6 +2,8 @@ from typing import Any
 from fastapi import FastAPI, status, HTTPException
 from scalar_fastapi import get_scalar_api_reference
 
+from .schemas import ShipmentStatus, ReadShipment, CreateShipment, UpdateShipment
+
 app = FastAPI()
 
 shipments = [
@@ -48,70 +50,39 @@ def get_latest_shipment() -> dict[str, Any]:
     latest = shipments[-1]
     return latest
 
-@app.get("/shipment/{id}")
-def get_shipment(id:int) -> dict[str, Any]:
+@app.get("/shipment/{id}", response_model=ReadShipment)
+def get_shipment(id:int):
     shipment = next((s for s in shipments if s["id"] == id), None)
 
     if not shipment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Shipment with id {id} not found")
     return shipment
 
-@app.post("/shipment")
-def create_shipment(data : dict) -> dict[str, Any]:
-
-    weight = data["weight"]
-    content = data["content"]
-
-    if weight > 25:
-        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="Maximum allowed weight is 25 kg.")
-
+@app.post("/shipment", response_model= ReadShipment)
+def create_shipment(data : CreateShipment):
     new_id = shipments[-1]["id"] + 1
 
-    shipments.append({
+    new_shipment = {
         "id": new_id,
-        "weight": weight,
-        "content": content,
-        "status": "Placed"
-    })
+        "status": ShipmentStatus.PLACED,
+        **data.model_dump()
+    }
 
-    return {"id": new_id, "message": "Shipment created successfully"}
+    shipments.append(new_shipment)
 
-@app.put("/shipment/{id}")
-def update_shipment(id :int, weight : float, content: str, status: str) -> dict[str, Any]:
-    shipment = next((s for s in shipments if s["id"] == id), None)
+    return new_shipment
 
-    if not shipment:
-        raise HTTPException(status_code=404, detail=f"Shipment with id {id} not found")
-
-    if weight > 25:
-        raise HTTPException(status_code=406, detail="Maximum allowed weight is 25 kg.")
-
-    shipment["weight"] = weight
-    shipment["content"] = content
-    shipment["status"] = status
-
-    return {"message": f"Shipment with id {id} updated successfully"}
-
-@app.patch("/shipment/{id}")
-def patch_update_shipment(id : int, weight : float | None = None, content: str | None = None, status: str | None = None) -> dict[str, Any]:
+@app.patch("/shipment/{id}", response_model=ReadShipment)
+def patch_update_shipment(id : int, data: UpdateShipment):
 
     shipment = next((s for s in shipments if s["id"] == id), None)
 
     if not shipment:
         raise HTTPException(status_code=404, detail=f"Shipment with id {id} not found")
 
-    if weight:
-        if weight > 25:
-            raise HTTPException(status_code=406, detail="Maximum allowed weight is 25 kg.")
-        shipment["weight"] = weight
+    shipment.update(data.model_dump(exclude_none=True))
 
-    if content:
-        shipment["content"] = content
-
-    if status:
-        shipment["status"] = status
-
-    return {"message": f"Shipment with id {id} updated successfully"}
+    return shipment
 
 @app.delete("/shipment/{id}")
 def delete_shipment(id : int) -> dict[str, Any]:
