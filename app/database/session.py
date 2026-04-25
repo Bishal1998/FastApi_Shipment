@@ -7,5 +7,7 @@ engine = create_engine(
     echo=True,
     connect_args={"check_same_thread": False}
 )
-from .models import Shipment
-SQLModel.metadata.create_all(bind=engine)
+
+def create_db_and_tables():
+    from .models import Shipment
+    SQLModel.metadata.create_all(bind=engine)

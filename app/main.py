@@ -1,10 +1,17 @@
 from typing import Any
 from fastapi import FastAPI, status, HTTPException
 from scalar_fastapi import get_scalar_api_reference
+from contextlib import asynccontextmanager
 
+from .database.session import create_db_and_tables
 from .schemas import ShipmentStatus, ReadShipment, CreateShipment, UpdateShipment
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan_handler(app: FastAPI):
+   create_db_and_tables()
+   yield
+
+app = FastAPI(lifespan=lifespan_handler)
 
 shipments = [
     {
