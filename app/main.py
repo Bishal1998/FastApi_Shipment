@@ -1,10 +1,15 @@
-from typing import Any
-from fastapi import FastAPI, status, HTTPException
-from scalar_fastapi import get_scalar_api_reference
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta
+from typing import Any
 
-from .database.session import create_db_and_tables
-from .schemas import ShipmentStatus, ReadShipment, CreateShipment, UpdateShipment
+from fastapi import FastAPI, HTTPException
+from scalar_fastapi import get_scalar_api_reference
+
+from app.database.models import Shipment
+
+from .database.session import SessionDep, create_db_and_tables
+from .schemas import CreateShipment, ReadShipment, ShipmentStatus, UpdateShipment
+
 
 @asynccontextmanager
 async def lifespan_handler(app: FastAPI):
@@ -58,47 +63,51 @@ def get_latest_shipment() -> dict[str, Any]:
     return latest
 
 @app.get("/shipment/{id}", response_model=ReadShipment)
-def get_shipment(id:int):
-    shipment = next((s for s in shipments if s["id"] == id), None)
+def get_shipment_by_id(id : int, session : SessionDep) :
+    shipment = session.get(Shipment, id)
 
     if not shipment:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Shipment with id {id} not found")
-    return shipment
+        raise HTTPException(status_code=404, detail=f"Shipment with id {id} not found")
+
+    return shipment 
 
 @app.post("/shipment", response_model= ReadShipment)
-def create_shipment(data : CreateShipment):
-    new_id = shipments[-1]["id"] + 1
+def create_shipment(data : CreateShipment, session : SessionDep):
 
-    new_shipment = {
-        "id": new_id,
-        "status": ShipmentStatus.PLACED,
-        **data.model_dump()
-    }
-
-    shipments.append(new_shipment)
+    new_shipment = Shipment(
+        **data.model_dump(),
+        status = ShipmentStatus.PLACED,
+        estimated_delivery = datetime.now() + timedelta(days=7)
+    )
+    
+    session.add(new_shipment)
+    session.commit()
+    session.refresh(new_shipment)
 
     return new_shipment
 
 @app.patch("/shipment/{id}", response_model=ReadShipment)
-def patch_update_shipment(id : int, data: UpdateShipment):
+def patch_update_shipment(id : int, data: UpdateShipment, session: SessionDep):
 
-    shipment = next((s for s in shipments if s["id"] == id), None)
+    shipment = session.get(Shipment, id)
 
     if not shipment:
         raise HTTPException(status_code=404, detail=f"Shipment with id {id} not found")
-
-    shipment.update(data.model_dump(exclude_none=True))
-
-    return shipment
+    shipment.sqlmodel_update(data.model_dump(exclude_none=True))
+    session.add(shipment)
+    session.commit()
+    session.refresh(shipment)
+    return shipment 
 
 @app.delete("/shipment/{id}")
-def delete_shipment(id : int) -> dict[str, Any]:
-    shipment = next((s for s in shipments if s["id"] == id), None)
+def delete_shipment(id : int, session: SessionDep) -> dict[str, Any]:
+    shipment = session.get(Shipment, id)
 
     if not shipment:
         raise HTTPException(status_code=404, detail=f"Shipment with id {id} not found")
 
-    shipments.remove(shipment)
+    session.delete(shipment)
+    session.commit()
 
     return {"message": f"Shipment with id {id} deleted successfully"}
 
