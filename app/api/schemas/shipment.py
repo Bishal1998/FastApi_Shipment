@@ -3,7 +3,7 @@ from random import randint
 
 from pydantic import BaseModel, Field
 
-from .database.models import ShipmentStatus
+from app.database.models import ShipmentStatus
 
 
 def random_destination():
