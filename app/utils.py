@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from uuid import uuid4
 
 import jwt
 
@@ -9,6 +10,7 @@ def generate_access_token(data: dict, expiry: timedelta = timedelta(hours=1)) ->
     return jwt.encode(
         payload={
             **data,
+            "jti": str(uuid4()),
             "exp": datetime.now(timezone.utc) + expiry,
         },
         algorithm=jwt_settings.JWT_ALGORITHM,

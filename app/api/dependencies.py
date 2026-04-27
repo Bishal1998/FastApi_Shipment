@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import oauth2_bearer
 from app.database.models import Seller
+from app.database.redis import is_jti_blacklisted
 from app.database.session import get_session
 from app.services.seller import SellerService
 from app.services.shipment import ShipmentService
@@ -21,10 +22,10 @@ def get_seller_service(session: SessionDep):
     return SellerService(session)
 
 
-def get_access_token(token: Annotated[str, Depends(oauth2_bearer)]) -> dict:
+async def get_access_token(token: Annotated[str, Depends(oauth2_bearer)]) -> dict:
     data = decode_access_token(token)
 
-    if data is None:
+    if data is None or await is_jti_blacklisted(data["jti"]):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
         )
