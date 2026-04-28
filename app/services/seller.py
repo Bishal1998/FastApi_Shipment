@@ -7,9 +7,6 @@ from app.api.schemas.seller import CreateSeller
 from app.database.models import Seller
 from app.utils import generate_access_token
 
-# # Verify password
-# bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password)
-
 
 class SellerService:
     def __init__(self, session: AsyncSession):
@@ -52,7 +49,7 @@ class SellerService:
         token = generate_access_token(
             data={
                 "user": {
-                    "id": seller.id,
+                    "id": str(seller.id),
                     "email": seller.email,
                 }
             }
