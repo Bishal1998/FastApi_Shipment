@@ -25,6 +25,7 @@ class Shipment(SQLModel, table=True):
         )
     )
     content: str
+    address: int = 2346
     weight: float = Field(le=25)
     destination: int
     status: ShipmentStatus = ShipmentStatus.PLACED
