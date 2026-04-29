@@ -88,3 +88,15 @@ class DeliveryPartner(User, table=True):
     shipments: list[Shipment] = Relationship(
         back_populates="delivery_partner", sa_relationship_kwargs={"lazy": "selectin"}
     )
+
+    @property
+    def active_shipments(self):
+        return [
+            shipment
+            for shipment in self.shipments
+            if shipment.status != ShipmentStatus.DELIVERED
+        ]
+
+    @property
+    def current_handling_capacity(self):
+        return self.max_handling_capacity - len(self.active_shipments)

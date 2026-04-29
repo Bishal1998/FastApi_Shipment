@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter
 
-from app.api.dependencies import ServiceDep, CurrentSellerDep
+from app.api.dependencies import ServiceDep, CurrentSellerDep, DeliveryPartnerServiceDep
 from app.api.schemas.shipment import (
     CreateShipment,
     ReadShipment,
@@ -17,7 +17,12 @@ router = APIRouter(
 
 
 @router.get("/{id}", response_model=ReadShipment)
-async def get_shipment_by_id(id: UUID, service: ServiceDep, _: CurrentSellerDep):
+async def get_shipment_by_id(
+    id: UUID,
+    service: ServiceDep,
+    _: CurrentSellerDep,
+    partner: DeliveryPartnerServiceDep,
+):
     return await service.get(id)
 
 
@@ -33,9 +38,13 @@ async def create_shipment(
 
 @router.patch("/{id}", response_model=ReadShipment)
 async def patch_update_shipment(
-    id: UUID, data: UpdateShipment, service: ServiceDep, seller: CurrentSellerDep
+    id: UUID,
+    data: UpdateShipment,
+    service: ServiceDep,
+    seller: CurrentSellerDep,
+    partner: DeliveryPartnerServiceDep,
 ):
-    return await service.update(id, data, seller)
+    return await service.update(id, data)
 
 
 @router.delete("/{id}")

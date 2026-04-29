@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import HTTPException
@@ -6,14 +6,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas.shipment import CreateShipment, UpdateShipment
 from app.database.models import Seller, Shipment, ShipmentStatus
+from app.services.base import BaseService
+from app.services.delivery_partner import DeliveryPartnerService
 
 
-class ShipmentService:
-    def __init__(self, session: AsyncSession):
-        self.session = session
+class ShipmentService(BaseService):
+    def __init__(self, session: AsyncSession, partner_service: DeliveryPartnerService):
+        super().__init__(Shipment, session)
+        self.partner_service = partner_service
 
     async def get(self, id: UUID) -> Shipment:
-        shipment = await self.session.get(Shipment, id)
+        shipment = await self._get(id)
 
         if not shipment:
             raise HTTPException(
@@ -27,31 +30,33 @@ class ShipmentService:
         new_shipment = Shipment(
             **data.model_dump(),
             status=ShipmentStatus.PLACED,
-            estimated_delivery=datetime.now() + timedelta(days=7),
+            estimated_delivery=datetime.now(timezone.utc) + timedelta(days=7),
             seller_id=seller.id,
         )
 
-        self.session.add(new_shipment)
-        await self.session.commit()
-        await self.session.refresh(new_shipment)
-        return new_shipment
+        partner = await self.partner_service.assign_shipment(new_shipment)
 
-    async def update(self, id: UUID, data: UpdateShipment, seller: Seller) -> Shipment:
+        new_shipment.delivery_partner_id = partner.id
+
+        shipment = await self._add(new_shipment)
+        return shipment
+
+    async def update(self, id: UUID, data: UpdateShipment) -> Shipment:
 
         shipment = await self.get(id)
 
-        if shipment.seller_id != seller.id:
-            raise HTTPException(
-                status_code=403,
-                detail="You do not have permission to update this shipment",
-            )
+        # if (
+        #     shipment.seller_id != seller.id
+        #     or shipment.delivery_partner_id != partner.id
+        # ):
+        #     raise HTTPException(
+        #         status_code=403,
+        #         detail="You do not have permission to update this shipment",
+        #     )
 
         shipment.sqlmodel_update(data.model_dump(exclude_none=True))
 
-        self.session.add(shipment)
-        await self.session.commit()
-        await self.session.refresh(shipment)
-        return shipment
+        return await self._update(shipment)
 
     async def delete(self, id: UUID, seller: Seller) -> None:
         shipment = await self.get(id)
@@ -62,5 +67,4 @@ class ShipmentService:
                 detail="You do not have permission to delete this shipment",
             )
 
-        await self.session.delete(shipment)
-        await self.session.commit()
+        await self._delete(shipment)

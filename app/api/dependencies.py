@@ -10,20 +10,25 @@ from app.database.redis import is_jti_blacklisted
 from app.database.session import get_session
 from app.services.seller import SellerService
 from app.services.shipment import ShipmentService
+from app.services.delivery_partner import DeliveryPartnerService
 from app.utils import decode_access_token
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 
 def get_shipment_service(session: SessionDep):
-    return ShipmentService(session)
+    return ShipmentService(session, DeliveryPartnerService(session))
 
 
 def get_seller_service(session: SessionDep):
     return SellerService(session)
 
 
-async def _get_access_token(token: Annotated[str, Depends(oauth2_seller)]) -> dict:
+def get_delivery_partner_service(session: SessionDep):
+    return DeliveryPartnerService(session)
+
+
+async def _get_access_token(token: str) -> dict:
     data = decode_access_token(token)
 
     if data is None or await is_jti_blacklisted(data["jti"]):
@@ -80,4 +85,8 @@ CurrentSellerDep = Annotated[Seller, Depends(get_current_seller)]
 
 CurrentDeliveryPartnerDep = Annotated[
     DeliveryPartner, Depends(get_current_delivery_partner)
+]
+
+DeliveryPartnerServiceDep = Annotated[
+    DeliveryPartnerService, Depends(get_delivery_partner_service)
 ]

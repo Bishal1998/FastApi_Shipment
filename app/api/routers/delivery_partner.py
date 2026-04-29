@@ -5,8 +5,8 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from app.api.dependencies import (
     CurrentDeliveryPartnerDep,
-    SellerServiceDep,
     get_delivery_partner_access_token,
+    DeliveryPartnerServiceDep,
 )
 from app.api.schemas.delivery_partner import (
     CreateDeliveryPartner,
@@ -22,14 +22,14 @@ router = APIRouter(
 
 
 @router.post("/signup", response_model=ReadDeliveryPartner)
-async def signup(data: CreateDeliveryPartner, service):
+async def signup(data: CreateDeliveryPartner, service: DeliveryPartnerServiceDep):
     return await service.add(data)
 
 
 @router.post("/login")
 async def login(
     request_form: Annotated[OAuth2PasswordRequestForm, Depends()],
-    service: SellerServiceDep,
+    service: DeliveryPartnerServiceDep,
 ):
     token = await service.login(request_form.username, request_form.password)
     return {"access_token": token, "type": "jwt"}
@@ -37,9 +37,11 @@ async def login(
 
 @router.put("/update")
 async def update_delivery_partner(
-    data: UpdateDeliveryPartner, partner: CurrentDeliveryPartnerDep, service
+    data: UpdateDeliveryPartner,
+    partner: CurrentDeliveryPartnerDep,
+    service: DeliveryPartnerServiceDep,
 ):
-    return await service.update_delivery_partner(partner.id, data)
+    return await service.update(partner.id, data)
 
 
 @router.get("/logout")
