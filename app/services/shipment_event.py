@@ -1,13 +1,15 @@
 
+from fastapi import BackgroundTasks
+
 from app.database.models import Shipment, ShipmentEvent, ShipmentStatus
 from app.services.base import BaseService
 from app.services.notification_service import NotificationService
 
 
 class ShipmentEventService(BaseService):
-    def __init__(self, session):
+    def __init__(self, session, tasks : BackgroundTasks):
         super().__init__(ShipmentEvent, session)
-        self.notification_service = NotificationService()
+        self.notification_service = NotificationService(tasks)
 
     async def add(self, shipment:Shipment, location : int | None = None, status : ShipmentStatus | None = None, description : str | None = None):
 
