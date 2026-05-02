@@ -48,24 +48,30 @@ class ShipmentEventService(BaseService):
                 return f"Scanned at {location}"
             
     async def _notify(self, shipment : Shipment, status : ShipmentStatus):
+
+        if status == ShipmentStatus.IN_TRANSIT:
+            return
+        subject : str
+        context : dict
+        template_name : str
+
         match status:
             case ShipmentStatus.PLACED:
-                await self.notification_service.send_email(
-                    recipients=[shipment.client_contact_email],
-                    subject="Your Order is placed",
-                    body="Your new order is placed, we will update you further"
-                )
-            
+                subject="Your Order is placed"
+                context={}
+                template_name="mail_placed.html"
+
             case ShipmentStatus.OUT_FOR_DELIVERY:
-                await self.notification_service.send_email(
-                    recipients=[shipment.client_contact_email],
-                    subject="Your Order is out for delivery",
-                    body=f"Your order is out for delivery with delivery partner: {shipment.delivery_partner.name}."
-                )
+                subject="Out for delivery"
+                context={"partner": shipment.delivery_partner.name}
+                template_name="mail_out_for_delivery.html"
 
             case ShipmentStatus.DELIVERED:
-                await self.notification_service.send_email(
+                subject="Your order is delivered"
+                context={"partner": shipment.delivery_partner.name}
+                template_name="mail_delivered.html"
+
+        await self.notification_service.send_message_with_template(
                     recipients=[shipment.client_contact_email],
-                    subject="Your Order is delivered",
-                    body=f"Your order is delivered with delivery partner: {shipment.delivery_partner.name}."
+                    subject = subject, context=context, template_name=template_name
                 )

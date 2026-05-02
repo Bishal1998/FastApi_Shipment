@@ -1,10 +1,13 @@
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from uuid import uuid4
 
 import jwt
 
 from app.config import jwt_settings
 
+APP_DIR = Path(__file__).resolve().parent
+TEMPLATE_DIR = APP_DIR/"templates"
 
 def generate_access_token(data: dict, expiry: timedelta = timedelta(hours=1)) -> str:
     return jwt.encode(
@@ -27,3 +30,5 @@ def decode_access_token(token: str) -> dict | None:
         )
     except jwt.PyJWTError:
         return None
+    
+
