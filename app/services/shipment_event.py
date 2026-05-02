@@ -1,11 +1,13 @@
 
 from app.database.models import Shipment, ShipmentEvent, ShipmentStatus
 from app.services.base import BaseService
+from app.services.notification_service import NotificationService
 
 
 class ShipmentEventService(BaseService):
     def __init__(self, session):
         super().__init__(ShipmentEvent, session)
+        self.notification_service = NotificationService()
 
     async def add(self, shipment:Shipment, location : int | None = None, status : ShipmentStatus | None = None, description : str | None = None):
 
@@ -21,6 +23,8 @@ class ShipmentEventService(BaseService):
             description=description if description else self._generate_description(status, location), 
             shipment_id=shipment.id
         )
+
+        await self._notify(shipment, status)
         return await self._add(new_event)
     
     async def get_latest_event(self, shipment : Shipment):
@@ -40,3 +44,26 @@ class ShipmentEventService(BaseService):
                 return "successfully delivered"
             case _:
                 return f"Scanned at {location}"
+            
+    async def _notify(self, shipment : Shipment, status : ShipmentStatus):
+        match status:
+            case ShipmentStatus.PLACED:
+                await self.notification_service.send_email(
+                    recipients=[shipment.client_contact_email],
+                    subject="Your Order is placed",
+                    body="Your new order is placed, we will update you further"
+                )
+            
+            case ShipmentStatus.OUT_FOR_DELIVERY:
+                await self.notification_service.send_email(
+                    recipients=[shipment.client_contact_email],
+                    subject="Your Order is out for delivery",
+                    body=f"Your order is out for delivery with delivery partner: {shipment.delivery_partner.name}."
+                )
+
+            case ShipmentStatus.DELIVERED:
+                await self.notification_service.send_email(
+                    recipients=[shipment.client_contact_email],
+                    subject="Your Order is delivered",
+                    body=f"Your order is delivered with delivery partner: {shipment.delivery_partner.name}."
+                )

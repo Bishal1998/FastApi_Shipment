@@ -40,6 +40,9 @@ class Shipment(SQLModel, table=True):
         sa_column=Column(postgresql.TIMESTAMP, default=datetime.now)
     )
 
+    client_contact_email:EmailStr | None = Field(default=None)
+    client_contact_phone : int | None = Field(default=None)
+
     seller_id: UUID = Field(foreign_key="sellers.id")
     seller: "Seller" = Relationship(
         back_populates="shipments", sa_relationship_kwargs={"lazy": "selectin"}
