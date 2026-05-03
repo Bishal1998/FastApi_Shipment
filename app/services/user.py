@@ -30,28 +30,33 @@ class UserService(BaseService):
 
     async def _generate_token(self, email, password) -> str:
 
-        seller = await self._get_by_email(email)
+        user = await self._get_by_email(email)
 
-        if seller is None:
+        if user is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"User with email: {email} not found",
             )
 
         password_matched = bcrypt.checkpw(
-            password.encode("utf-8"), seller.hashed_password.encode("utf-8")
+            password.encode("utf-8"), user.hashed_password.encode("utf-8")
         )
 
         if not password_matched:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect password"
             )
+        
+        if not user.email_verified:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Email not verified"
+            )
 
         token = generate_access_token(
             data={
                 "user": {
-                    "id": str(seller.id),
-                    "email": seller.email,
+                    "id": str(user.id),
+                    "email": user.email,
                 }
             }
         )

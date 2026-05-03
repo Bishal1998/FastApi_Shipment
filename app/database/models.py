@@ -63,6 +63,7 @@ class User(SQLModel):
     name: str
     email: EmailStr
     hashed_password: str
+    email_verified : bool = Field(default=False)
 
 
 class Seller(User, table=True):
