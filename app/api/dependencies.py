@@ -22,12 +22,12 @@ def get_shipment_service(session: SessionDep, tasks : BackgroundTasks):
                            DeliveryPartnerService(session), ShipmentEventService(session, tasks))
 
 
-def get_seller_service(session: SessionDep):
-    return SellerService(session)
+def get_seller_service(session: SessionDep, tasks : BackgroundTasks):
+    return SellerService(session, tasks)
 
 
-def get_delivery_partner_service(session: SessionDep):
-    return DeliveryPartnerService(session)
+def get_delivery_partner_service(session: SessionDep, tasks : BackgroundTasks):
+    return DeliveryPartnerService(session, tasks)
 
 
 async def _get_access_token(token: str) -> dict:

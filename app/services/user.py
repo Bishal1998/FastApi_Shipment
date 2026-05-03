@@ -1,17 +1,21 @@
 from app.database.models import User
+from app.services.notification_service import NotificationService
 from app.services.base import BaseService
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from fastapi import HTTPException, status
+from fastapi import BackgroundTasks, HTTPException, status
 import bcrypt
-from app.utils import generate_access_token
+from app.utils import generate_access_token, generate_url_safe_token
+
+from app.config import app_settings
 
 
 class UserService(BaseService):
-    def __init__(self, model: User, session: AsyncSession):
+    def __init__(self, model: User, session: AsyncSession, tasks : BackgroundTasks):
         super().__init__(model, session)
+        self.notification_service = NotificationService(tasks)
 
     async def _get_by_email(self, email: str):
         return await self.session.scalar(
@@ -26,7 +30,24 @@ class UserService(BaseService):
             ).decode("utf-8"),
         )
 
-        return await self._add(user)
+        user = await self._add(user)
+
+        verify_email_token = generate_url_safe_token({
+            "email" : user.email,
+            "id" : user.id
+        })
+
+        self.notification_service.send_message_with_template(
+            recipients = [user.email],
+            subject = "Verify your email",
+            context = {
+                "username" : user.name,
+                "verification_url" : f"http://{app_settings.APP_DOMAIN}/user/verify?token={verify_email_token}"
+            },
+            template_name = "mail_email_verify.html"
+        )
+
+        return user
 
     async def _generate_token(self, email, password) -> str:
 

@@ -6,8 +6,8 @@ from app.services.user import UserService
 
 
 class SellerService(UserService):
-    def __init__(self, session: AsyncSession):
-        super().__init__(Seller, session)
+    def __init__(self, session: AsyncSession, tasks):
+        super().__init__(Seller, session, tasks)
 
     async def add(self, data: CreateSeller) -> Seller:
 

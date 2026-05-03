@@ -5,6 +5,12 @@ _base_config = SettingsConfigDict(
     env_file="./.env", extra="ignore", env_ignore_empty=True
 )
 
+class AppSettings(BaseSettings):
+    APP_NAME:str
+    APP_DOMAIN:str
+
+    model_config = _base_config
+
 
 class DatabaseSettings(BaseSettings):
     POSTGRES_PASSWORD: str
@@ -44,6 +50,7 @@ class NotificationSettings(BaseSettings):
     model_config = _base_config
 
 
+app_settings = AppSettings()
 settings = DatabaseSettings()
 jwt_settings = JWTSettings()
 notification_settings = NotificationSettings()
