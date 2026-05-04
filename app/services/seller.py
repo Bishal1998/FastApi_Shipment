@@ -13,6 +13,7 @@ class SellerService(UserService):
 
         return await self._add_user(
             data.model_dump(),
+            "seller"
         )
 
     async def login(self, email: str, password: str) -> str:

@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from app.database.models import User
 from app.services.notification_service import NotificationService
 from app.services.base import BaseService
@@ -7,7 +9,7 @@ from sqlmodel import select
 
 from fastapi import BackgroundTasks, HTTPException, status
 import bcrypt
-from app.utils import generate_access_token, generate_url_safe_token
+from app.utils import decode_url_safe_token, generate_access_token, generate_url_safe_token
 
 from app.config import app_settings
 
@@ -22,7 +24,13 @@ class UserService(BaseService):
             select(self.model).where(self.model.email == email)
         )
 
-    async def _add_user(self, data: dict):
+    async def _add_user(self, data: dict, router_prefix : str):
+
+        existing_user = self._get_by_email(data["email"])
+
+        if existing_user:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User already exists with same email")
+
         user = self.model(
             **data,
             hashed_password=bcrypt.hashpw(
@@ -34,18 +42,22 @@ class UserService(BaseService):
 
         verify_email_token = generate_url_safe_token({
             "email" : user.email,
-            "id" : user.id
+            "id" : str(user.id)
         })
 
-        self.notification_service.send_message_with_template(
+        print("*" * 10)
+
+        await self.notification_service.send_message_with_template(
             recipients = [user.email],
             subject = "Verify your email",
             context = {
                 "username" : user.name,
-                "verification_url" : f"http://{app_settings.APP_DOMAIN}/user/verify?token={verify_email_token}"
+                "verification_url" : f"http://{app_settings.APP_DOMAIN}/{router_prefix}/verify?token={verify_email_token}"
             },
             template_name = "mail_email_verify.html"
         )
+
+        print("*" * 10)
 
         return user
 
@@ -83,3 +95,13 @@ class UserService(BaseService):
         )
 
         return token
+    
+    async def verify_email(self, token : str):
+        token_data = decode_url_safe_token(token)
+
+        if not token_data:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid Token")
+
+        user = await self._get(UUID(token_data["id"]))
+        user.email_verified = True
+        await self._update(user)

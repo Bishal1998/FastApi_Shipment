@@ -17,7 +17,7 @@ class DeliveryPartnerService(UserService):
         super().__init__(DeliveryPartner, session, tasks)
 
     async def add(self, delivery_partner: CreateDeliveryPartner) -> DeliveryPartner:
-        return await self._add_user(delivery_partner.model_dump())
+        return await self._add_user(delivery_partner.model_dump(), "partner")
 
     async def update(self, id: UUID, data: UpdateDeliveryPartner) -> DeliveryPartner:
         delivery_partner = await self._get(id)
