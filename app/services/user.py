@@ -1,5 +1,7 @@
 from uuid import UUID
 
+from pydantic import EmailStr
+
 from app.database.models import User
 from app.services.notification_service import NotificationService
 from app.services.base import BaseService
@@ -105,3 +107,22 @@ class UserService(BaseService):
         user = await self._get(UUID(token_data["id"]))
         user.email_verified = True
         await self._update(user)
+
+    async def forgot_password(self, email : EmailStr, router_prefix : str):
+        user = self._get_by_email(email)
+
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User not found with email: {email}")
+        
+        token = generate_url_safe_token({"id" : user.id}, salt="password-reset")
+
+        await self.notification_service.send_message_with_template(
+            recipients=[user.email],
+            subject="Reset your password",
+            context={
+                "username" : user.email,
+                "reset_url" : f"http://{app_settings.APP_DOMAIN}/{router_prefix}/reset-password?token={token}"
+            },
+            template_name="mail_password_reset.html"
+        )
+        
