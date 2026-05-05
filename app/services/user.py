@@ -117,7 +117,7 @@ class UserService(BaseService):
             subject="Reset your password",
             context={
                 "username" : user.email,
-                "reset_url" : f"http://{app_settings.APP_DOMAIN}/{router_prefix}/password-reset?token={token}"
+                "reset_url" : f"http://{app_settings.APP_DOMAIN}/{router_prefix}/reset-password-form?token={token}"
             },
             template_name="mail_password_reset.html"
         )
