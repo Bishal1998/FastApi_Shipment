@@ -1,3 +1,4 @@
+from datetime import timedelta
 from uuid import UUID
 
 from pydantic import EmailStr
@@ -46,9 +47,6 @@ class UserService(BaseService):
             "email" : user.email,
             "id" : str(user.id)
         })
-
-        print("*" * 10)
-
         await self.notification_service.send_message_with_template(
             recipients = [user.email],
             subject = "Verify your email",
@@ -58,8 +56,6 @@ class UserService(BaseService):
             },
             template_name = "mail_email_verify.html"
         )
-
-        print("*" * 10)
 
         return user
 
@@ -109,20 +105,36 @@ class UserService(BaseService):
         await self._update(user)
 
     async def forgot_password(self, email : EmailStr, router_prefix : str):
-        user = self._get_by_email(email)
+        user = await self._get_by_email(email)
 
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User not found with email: {email}")
         
-        token = generate_url_safe_token({"id" : user.id}, salt="password-reset")
+        token = generate_url_safe_token({"id" : str(user.id)}, salt="password-reset")
 
         await self.notification_service.send_message_with_template(
             recipients=[user.email],
             subject="Reset your password",
             context={
                 "username" : user.email,
-                "reset_url" : f"http://{app_settings.APP_DOMAIN}/{router_prefix}/reset-password?token={token}"
+                "reset_url" : f"http://{app_settings.APP_DOMAIN}/{router_prefix}/password-reset?token={token}"
             },
             template_name="mail_password_reset.html"
         )
+
+    async def reset_password(self, token : str, password : str):
+        token_data = decode_url_safe_token(
+            token,
+            salt="password-reset",
+            expiry=timedelta(days=1)
+        )
+
+        if not token_data:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or Expired token")
+
+        user = await self._get(UUID(token_data["id"]))
+
+        user.hashed_password = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+        await self._update(user)
         
