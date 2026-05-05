@@ -1,7 +1,8 @@
 from typing import Annotated
+from fastapi.templating import Jinja2Templates
 from pydantic import EmailStr
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Form
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.api.dependencies import (
@@ -15,6 +16,12 @@ from app.api.schemas.delivery_partner import (
     UpdateDeliveryPartner,
 )
 from app.database.redis import add_jti_to_blacklist
+
+from fastapi import Request
+
+from app.config import app_settings
+
+from app.utils import TEMPLATE_DIR
 
 router = APIRouter(
     prefix="/partner",
@@ -69,8 +76,21 @@ async def forgot_password(email : EmailStr, service : DeliveryPartnerServiceDep)
     }
 
 @router.get("/password-reset")
-async def password_reset(token : str, password : str,  service : DeliveryPartnerServiceDep):
+async def password_reset(token : str, password : Annotated[str, Form()],  service : DeliveryPartnerServiceDep):
     await service.reset_password(token, password)
     return {
         "detail" : "Password reset successfully"
     }
+
+
+@router.get("/reset-password-form")
+async def get_password_reset_form(request : Request, token : str):
+    templates = Jinja2Templates(TEMPLATE_DIR)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="password_reset_form.html",
+        context={
+            "reset_url":f"http://{app_settings.APP_DOMAIN}/partner/password-reset?token={token}"
+        }
+    )
