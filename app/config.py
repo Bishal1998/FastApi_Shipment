@@ -49,8 +49,16 @@ class NotificationSettings(BaseSettings):
 
     model_config = _base_config
 
+class Twilio_Setting(BaseSettings):
+    ACCOUNT_SID : str
+    AUTH_TOKEN : str
+    PHONE_NUMBER : str
+
+    model_config = _base_config
+
 
 app_settings = AppSettings()
 settings = DatabaseSettings()
 jwt_settings = JWTSettings()
 notification_settings = NotificationSettings()
+twilio_settings = Twilio_Setting()

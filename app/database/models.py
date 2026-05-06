@@ -40,8 +40,8 @@ class Shipment(SQLModel, table=True):
         sa_column=Column(postgresql.TIMESTAMP, default=datetime.now)
     )
 
-    client_contact_email:EmailStr | None = Field(default=None)
-    client_contact_phone : int | None = Field(default=None)
+    client_contact_email:EmailStr
+    client_contact_phone : str
 
     seller_id: UUID = Field(foreign_key="sellers.id")
     seller: "Seller" = Relationship(

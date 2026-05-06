@@ -19,7 +19,7 @@ SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 def get_shipment_service(session: SessionDep, tasks : BackgroundTasks):
     return ShipmentService(session, 
-                           DeliveryPartnerService(session), ShipmentEventService(session, tasks))
+                           DeliveryPartnerService(session, tasks), ShipmentEventService(session, tasks))
 
 
 def get_seller_service(session: SessionDep, tasks : BackgroundTasks):

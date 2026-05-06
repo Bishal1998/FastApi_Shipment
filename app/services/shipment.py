@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta
 from uuid import UUID
 
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas.shipment import CreateShipment, UpdateShipment
 from app.database.models import DeliveryPartner, Seller, Shipment, ShipmentStatus
+from app.database.redis import get_shipment_verification_code
 from app.services.base import BaseService
 from app.services.delivery_partner import DeliveryPartnerService
 from app.services.shipment_event import ShipmentEventService
@@ -57,7 +58,14 @@ class ShipmentService(BaseService):
 
         shipment = await self.get(id)
 
-        update = data.model_dump(exclude_none=True)
+        if shipment.status == ShipmentStatus.DELIVERED:
+            code = await get_shipment_verification_code(shipment.id)
+
+            if code != data.verification_code:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Client Not authorized")
+
+
+        update = data.model_dump(exclude_none=True, exclude=["verification_code"])
 
         if data.estimated_delivery:
             shipment.estimated_delivery = data.estimated_delivery

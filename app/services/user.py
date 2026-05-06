@@ -29,7 +29,9 @@ class UserService(BaseService):
 
     async def _add_user(self, data: dict, router_prefix : str):
 
-        existing_user = self._get_by_email(data["email"])
+        existing_user = await self._get_by_email(data["email"])
+
+        print(existing_user, "*" * 10)
 
         if existing_user:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User already exists with same email")
