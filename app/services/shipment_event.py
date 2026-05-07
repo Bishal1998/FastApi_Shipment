@@ -8,6 +8,9 @@ from app.database.redis import add_shipment_verification_code
 from app.services.base import BaseService
 from app.services.notification_service import NotificationService
 
+from app.config import app_settings
+from app.utils import generate_url_safe_token
+
 
 class ShipmentEventService(BaseService):
     def __init__(self, session, tasks : BackgroundTasks):
@@ -86,6 +89,8 @@ class ShipmentEventService(BaseService):
             case ShipmentStatus.DELIVERED:
                 subject="Your order is delivered"
                 context={"partner": shipment.delivery_partner.name}
+                token = generate_url_safe_token({"id" : str(shipment.id)})
+                context["review_url"] = f"http://{app_settings.APP_DOMAIN}/shipment/review?token={token}"
                 template_name="mail_delivered.html"
 
         await self.notification_service.send_message_with_template(
