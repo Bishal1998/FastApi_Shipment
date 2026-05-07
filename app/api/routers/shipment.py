@@ -9,6 +9,7 @@ from app.api.dependencies import CurrentDeliveryPartnerDep, ServiceDep, CurrentS
 from app.api.schemas.shipment import (
     CreateShipment,
     ReadShipment,
+    ShipmentReview,
     UpdateShipment,
 )
 from app.database.models import DeliveryPartner
@@ -72,3 +73,8 @@ async def delete_shipment(
 ) -> dict[str, Any]:
     await service.delete(id, seller)
     return {"message": f"Shipment with id {id} deleted successfully"}
+
+@router.post("/review")
+async def submit_review(token : str, review : ShipmentReview, service : ServiceDep):
+    await service.rate(token, review)
+    return {"detail" : "Review Submitted"}
