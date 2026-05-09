@@ -7,13 +7,29 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy import ARRAY, INTEGER
 from sqlmodel import Column, Field, Relationship, SQLModel
 
-
 class ShipmentStatus(str, Enum):
     PLACED = "Placed"
     IN_TRANSIT = "In Transit"
     DELIVERED = "Delivered"
     OUT_FOR_DELIVERY = "Out for Delivery"
 
+class TagName(str, Enum):
+    EXPRESS = "express"
+    STANDARD = "standard"
+    FRAGILE = "fragile"
+    HEAVY = "heavy"
+    INTERNATIONAL = "international"
+    DOMESTIC = "domestic"
+    TEMPERATYURE_CONTROLLED = "temperature_controlled"
+    GIFT = "gift"
+    RETURN = "return"
+    DOCUMENTS = "documents"
+
+class ShipmentTag(SQLModel, table = True):
+    __tablename__ = "shipment_tags"
+
+    shipment_id : UUID = Field(foreign_key="shipments.id", primary_key=True)
+    tag_id : UUID = Field(foreign_key="tags.id", primary_key=True)
 
 class Shipment(SQLModel, table=True):
     __tablename__ = "shipments"
@@ -58,17 +74,33 @@ class Shipment(SQLModel, table=True):
         "lazy" : "selectin"
     })
 
+    tags : list["Tag"] = Relationship(back_populates="shipments", link_model=ShipmentTag, sa_relationship_kwargs={"lazy" : "selectin"})
+
     @property
     def status(self):
         return self.timeline[-1].status if len(self.timeline) > 0 else None
 
+class Tag(SQLModel, table = True):
+    __tablename__ = "tags"
+
+    id : UUID = Field(
+        sa_column=Column(
+            postgresql.UUID,
+            default=uuid4,
+            primary_key=True
+        )
+    )
+    name : TagName
+    instruction : str
+
+    shipments : list[Shipment] = Relationship(back_populates="tags",
+    link_model=ShipmentTag, sa_relationship_kwargs={"lazy":"selectin"})
 
 class User(SQLModel):
     name: str
     email: EmailStr
     hashed_password: str
     email_verified : bool = Field(default=False)
-
 
 class Seller(User, table=True):
     __tablename__ = "sellers"
@@ -85,7 +117,6 @@ class Seller(User, table=True):
     shipments: list[Shipment] = Relationship(
         back_populates="seller", sa_relationship_kwargs={"lazy": "selectin"}
     )
-
 
 class DeliveryPartner(User, table=True):
     __tablename__ = "delivery_partners"
@@ -119,8 +150,6 @@ class DeliveryPartner(User, table=True):
     @property
     def current_handling_capacity(self):
         return self.max_handling_capacity - len(self.active_shipments)
-
-
 
 class ShipmentEvent(SQLModel, table=True):
     __tablename__ = "shipment_event"
