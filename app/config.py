@@ -27,6 +27,9 @@ class DatabaseSettings(BaseSettings):
     @property
     def POSTGRES_URL(self) -> str:
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+    
+    def REDIS_URL(self, db) -> str:
+        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{db}"
 
 
 class JWTSettings(BaseSettings):
