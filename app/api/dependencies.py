@@ -17,17 +17,17 @@ from app.utils import decode_access_token
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 
-def get_shipment_service(session: SessionDep, tasks : BackgroundTasks):
+def get_shipment_service(session: SessionDep):
     return ShipmentService(session, 
-                           DeliveryPartnerService(session, tasks), ShipmentEventService(session, tasks))
+                           DeliveryPartnerService(session), ShipmentEventService(session))
 
 
-def get_seller_service(session: SessionDep, tasks : BackgroundTasks):
-    return SellerService(session, tasks)
+def get_seller_service(session: SessionDep):
+    return SellerService(session)
 
 
-def get_delivery_partner_service(session: SessionDep, tasks : BackgroundTasks):
-    return DeliveryPartnerService(session, tasks)
+def get_delivery_partner_service(session: SessionDep):
+    return DeliveryPartnerService(session)
 
 
 async def _get_access_token(token: str) -> dict:

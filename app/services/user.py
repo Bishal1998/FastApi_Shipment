@@ -4,23 +4,23 @@ from uuid import UUID
 from pydantic import EmailStr
 
 from app.database.models import User
-from app.services.notification_service import NotificationService
 from app.services.base import BaseService
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from fastapi import BackgroundTasks, HTTPException, status
+from fastapi import HTTPException, status
 import bcrypt
 from app.utils import decode_url_safe_token, generate_access_token, generate_url_safe_token
 
 from app.config import app_settings
 
+from app.worker.tasks import send_message_with_template
+
 
 class UserService(BaseService):
-    def __init__(self, model: User, session: AsyncSession, tasks : BackgroundTasks):
+    def __init__(self, model: User, session: AsyncSession):
         super().__init__(model, session)
-        self.notification_service = NotificationService(tasks)
 
     async def _get_by_email(self, email: str):
         return await self.session.scalar(
@@ -49,7 +49,7 @@ class UserService(BaseService):
             "email" : user.email,
             "id" : str(user.id)
         })
-        await self.notification_service.send_message_with_template(
+        send_message_with_template.delay(
             recipients = [user.email],
             subject = "Verify your email",
             context = {
@@ -114,7 +114,7 @@ class UserService(BaseService):
         
         token = generate_url_safe_token({"id" : str(user.id)}, salt="password-reset")
 
-        await self.notification_service.send_message_with_template(
+        send_message_with_template.delay(
             recipients=[user.email],
             subject="Reset your password",
             context={

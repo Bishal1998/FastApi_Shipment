@@ -1,21 +1,19 @@
 
 from random import randint
 
-from fastapi import BackgroundTasks
-
 from app.database.models import Shipment, ShipmentEvent, ShipmentStatus
 from app.database.redis import add_shipment_verification_code
 from app.services.base import BaseService
-from app.services.notification_service import NotificationService
 
 from app.config import app_settings
 from app.utils import generate_url_safe_token
 
+from app.worker.tasks import send_sms, send_message_with_template
+
 
 class ShipmentEventService(BaseService):
-    def __init__(self, session, tasks : BackgroundTasks):
+    def __init__(self, session):
         super().__init__(ShipmentEvent, session)
-        self.notification_service = NotificationService(tasks)
 
     async def add(self, shipment:Shipment, location : int | None = None, status : ShipmentStatus | None = None, description : str | None = None):
 
@@ -77,7 +75,7 @@ class ShipmentEventService(BaseService):
 
                 if shipment.client_contact_phone:
                     print("Sending SMS to:", shipment.client_contact_phone)
-                    await self.notification_service.send_sms(
+                    send_sms.delay(
                         to=shipment.client_contact_phone,
                         body=f"Your order is arriving soon! Share the code {code} with your dellivery partner."
                     )
@@ -93,7 +91,7 @@ class ShipmentEventService(BaseService):
                 context["review_url"] = f"http://{app_settings.APP_DOMAIN}/shipment/review?token={token}"
                 template_name="mail_delivered.html"
 
-        await self.notification_service.send_message_with_template(
+        send_message_with_template.delay(
                     recipients=[shipment.client_contact_email],
                     subject = subject, context=context, template_name=template_name
                 )
