@@ -6,7 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field, EmailStr
 
 from app.api.schemas.seller import ReadSeller
-from app.database.models import ShipmentEvent, ShipmentStatus
+from app.database.models import ShipmentEvent, ShipmentStatus, Tag
 
 
 def random_destination():
@@ -24,6 +24,7 @@ class ReadShipment(BaseShipment):
     timeline : list[ShipmentEvent]
     estimated_delivery: datetime
     seller: ReadSeller
+    tags: list[Tag]
 
 
 class CreateShipment(BaseShipment):

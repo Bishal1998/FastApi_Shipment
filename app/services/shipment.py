@@ -5,7 +5,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas.shipment import CreateShipment, ShipmentReview, UpdateShipment
-from app.database.models import DeliveryPartner, Review, Seller, Shipment, ShipmentStatus
+from app.database.models import Review, Seller, Shipment, ShipmentStatus, TagName
 from app.database.redis import get_shipment_verification_code
 from app.services.base import BaseService
 from app.services.delivery_partner import DeliveryPartnerService
@@ -106,3 +106,26 @@ class ShipmentService(BaseService):
         self.session.add(new_review)
         await self.session.commit()
         await self.session.refresh(new_review)
+
+    async def add_tag(self, id : UUID, tag : TagName):
+        shipment = await self._get(id)
+
+        print(shipment)
+
+        shipment.tags.append(await tag.tag(self.session))
+
+        return await self._update(shipment)
+
+    async def remove_tag(self, id : UUID, tag : TagName):
+        shipment = await self._get(id)
+
+        try:
+            shipment.tags.remove(await tag.tag(self.session))
+        except ValueError:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tag doesn't exist!")
+        
+        return await self._update(shipment)
+
+
+
+    

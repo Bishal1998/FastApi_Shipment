@@ -12,7 +12,7 @@ from app.api.schemas.shipment import (
     ShipmentReview,
     UpdateShipment,
 )
-from app.database.models import DeliveryPartner
+from app.database.models import DeliveryPartner, TagName
 from app.services.shipment import ShipmentService
 from app.utils import TEMPLATE_DIR
 
@@ -78,3 +78,11 @@ async def delete_shipment(
 async def submit_review(token : str, review : ShipmentReview, service : ServiceDep):
     await service.rate(token, review)
     return {"detail" : "Review Submitted"}
+
+@router.post("/tag", response_model=ReadShipment)
+async def add_tag(id: UUID, tag : TagName, service : ServiceDep):
+    return await service.add_tag(id, tag)
+
+@router.delete("/tag", response_model=ReadShipment)
+async def remove_tag(id: UUID, tag : TagName, service : ServiceDep):
+    return await service.remove_tag(id, tag)

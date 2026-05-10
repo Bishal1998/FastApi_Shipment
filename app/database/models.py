@@ -5,7 +5,8 @@ from uuid import UUID, uuid4
 from pydantic import EmailStr
 from sqlalchemy.dialects import postgresql
 from sqlalchemy import ARRAY, INTEGER
-from sqlmodel import Column, Field, Relationship, SQLModel
+from sqlmodel import Column, Field, Relationship, SQLModel, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 class ShipmentStatus(str, Enum):
     PLACED = "Placed"
@@ -24,6 +25,11 @@ class TagName(str, Enum):
     GIFT = "gift"
     RETURN = "return"
     DOCUMENTS = "documents"
+
+    async def tag(self, session : AsyncSession):
+        return await session.scalar(
+            select(Tag).where(Tag.name == self.value.upper())
+        )
 
 class ShipmentTag(SQLModel, table = True):
     __tablename__ = "shipment_tags"
