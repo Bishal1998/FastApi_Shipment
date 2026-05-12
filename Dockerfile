@@ -14,4 +14,4 @@ COPY . .
 
 EXPOSE 8000
 
-ENTRYPOINT [ "fastapi", "run", "--port" , "8000" ]
+CMD [ "fastapi", "run", "--port" , "8000" ]
