@@ -1,21 +1,21 @@
 from datetime import timedelta
 from uuid import UUID
 
+import bcrypt
+from fastapi import HTTPException, status
 from pydantic import EmailStr
-
-from app.database.models import User
-from app.services.base import BaseService
-
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from fastapi import HTTPException, status
-import bcrypt
-from app.utils import decode_url_safe_token, generate_access_token, generate_url_safe_token
-
 from app.config import app_settings
-
-from app.worker.tasks import send_message_with_template
+from app.database.models import User
+from app.services.base import BaseService
+from app.utils import (
+    decode_url_safe_token,
+    generate_access_token,
+    generate_url_safe_token,
+)
+from app.worker.tasks import send_email_with_template
 
 
 class UserService(BaseService):
@@ -27,14 +27,15 @@ class UserService(BaseService):
             select(self.model).where(self.model.email == email)
         )
 
-    async def _add_user(self, data: dict, router_prefix : str):
+    async def _add_user(self, data: dict, router_prefix: str):
 
         existing_user = await self._get_by_email(data["email"])
 
-        print(existing_user, "*" * 10)
-
         if existing_user:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User already exists with same email")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="User already exists with same email",
+            )
 
         user = self.model(
             **data,
@@ -45,18 +46,27 @@ class UserService(BaseService):
 
         user = await self._add(user)
 
-        verify_email_token = generate_url_safe_token({
-            "email" : user.email,
-            "id" : str(user.id)
-        })
-        send_message_with_template.delay(
-            recipients = [user.email],
-            subject = "Verify your email",
-            context = {
-                "username" : user.name,
-                "verification_url" : f"http://{app_settings.APP_DOMAIN}/{router_prefix}/verify?token={verify_email_token}"
+        verify_email_token = generate_url_safe_token(
+            {"email": user.email, "id": str(user.id)}
+        )
+        # send_message_with_template.delay(
+        #     recipients = [user.email],
+        #     subject = "Verify your email",
+        #     context = {
+        #         "username" : user.name,
+        #         "verification_url" : f"http://{app_settings.APP_DOMAIN}/{router_prefix}/verify?token={verify_email_token}"
+        #     },
+        #     template_name = "mail_email_verify.html"
+        # )
+
+        await send_email_with_template(
+            recipients=[user.email],
+            subject="Verify your email",
+            context={
+                "username": user.name,
+                "verification_url": f"http://{app_settings.APP_DOMAIN}/{router_prefix}/verify?token={verify_email_token}",
             },
-            template_name = "mail_email_verify.html"
+            template_name="mail_email_verify.html",
         )
 
         return user
@@ -79,7 +89,7 @@ class UserService(BaseService):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect password"
             )
-        
+
         if not user.email_verified:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Email not verified"
@@ -95,48 +105,55 @@ class UserService(BaseService):
         )
 
         return token
-    
-    async def verify_email(self, token : str):
+
+    async def verify_email(self, token: str):
         token_data = decode_url_safe_token(token)
 
         if not token_data:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid Token")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid Token"
+            )
 
         user = await self._get(UUID(token_data["id"]))
         user.email_verified = True
         await self._update(user)
 
-    async def forgot_password(self, email : EmailStr, router_prefix : str):
+    async def forgot_password(self, email: EmailStr, router_prefix: str):
         user = await self._get_by_email(email)
 
         if not user:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User not found with email: {email}")
-        
-        token = generate_url_safe_token({"id" : str(user.id)}, salt="password-reset")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"User not found with email: {email}",
+            )
 
-        send_message_with_template.delay(
+        token = generate_url_safe_token({"id": str(user.id)}, salt="password-reset")
+
+        await send_email_with_template(
             recipients=[user.email],
             subject="Reset your password",
             context={
-                "username" : user.email,
-                "reset_url" : f"http://{app_settings.APP_DOMAIN}/{router_prefix}/reset-password-form?token={token}"
+                "username": user.email,
+                "reset_url": f"http://{app_settings.APP_DOMAIN}/{router_prefix}/reset-password-form?token={token}",
             },
-            template_name="mail_password_reset.html"
+            template_name="mail_password_reset.html",
         )
 
-    async def reset_password(self, token : str, password : str):
+    async def reset_password(self, token: str, password: str):
         token_data = decode_url_safe_token(
-            token,
-            salt="password-reset",
-            expiry=timedelta(days=1)
+            token, salt="password-reset", expiry=timedelta(days=1)
         )
 
         if not token_data:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or Expired token")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or Expired token",
+            )
 
         user = await self._get(UUID(token_data["id"]))
 
-        user.hashed_password = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+        user.hashed_password = bcrypt.hashpw(
+            password.encode("utf-8"), bcrypt.gensalt()
+        ).decode("utf-8")
 
         await self._update(user)
-        
