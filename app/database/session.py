@@ -1,3 +1,5 @@
+import ssl
+
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel
@@ -5,21 +7,22 @@ from sqlmodel import SQLModel
 from app.config import settings
 
 engine = create_async_engine(
-    url= settings.POSTGRES_URL,
+    url=settings.POSTGRES_URL,
     echo=True,
+    connect_args={"ssl": ssl.create_default_context()},
 )
+
 
 async def create_db_and_tables():
     async with engine.begin() as connection:
-        from .models import Shipment
-        from .models import Seller
+        from .models import Seller, Shipment
+
         await connection.run_sync(SQLModel.metadata.create_all)
+
 
 async def get_session():
     async_session = sessionmaker(
-        bind=engine,
-        class_=AsyncSession,
-        expire_on_commit=False
+        bind=engine, class_=AsyncSession, expire_on_commit=False
     )
 
     async with async_session() as session:
