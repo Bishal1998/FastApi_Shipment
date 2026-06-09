@@ -49,6 +49,21 @@ class UserService(BaseService):
         verify_email_token = generate_url_safe_token(
             {"email": user.email, "id": str(user.id)}
         )
+
+        try:
+            await send_email_with_template(
+                recipients=[user.email],
+                subject="Verify your email",
+                context={
+                    "username": user.name,
+                    "verification_url": f"http://{app_settings.APP_DOMAIN}/{router_prefix}/verify?token={verify_email_token}",
+                },
+                template_name="mail_email_verify.html",
+            )
+        except Exception as e:
+            print(f"EMAIL ERROR: {e}")
+
+        return user
         # send_message_with_template.delay(
         #     recipients = [user.email],
         #     subject = "Verify your email",
