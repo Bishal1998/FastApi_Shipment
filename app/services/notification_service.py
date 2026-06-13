@@ -9,6 +9,8 @@ from twilio.rest import Client
 from app.config import notification_settings, twilio_settings
 from app.utils import TEMPLATE_DIR
 
+resend.api_key = notification_settings.RESEND_API_KEY
+
 __jinja = Environment(
     loader=FileSystemLoader(TEMPLATE_DIR), autoescape=select_autoescape(["html"])
 )
