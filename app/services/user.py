@@ -10,17 +10,20 @@ from sqlmodel import select
 from app.config import app_settings
 from app.database.models import User
 from app.services.base import BaseService
+from app.services.notification_service import NotificationService
 from app.utils import (
     decode_url_safe_token,
     generate_access_token,
     generate_url_safe_token,
 )
-from app.worker.tasks import send_email_with_template
 
 
 class UserService(BaseService):
-    def __init__(self, model: User, session: AsyncSession):
+    def __init__(
+        self, model: User, session: AsyncSession, notification: NotificationService
+    ):
         super().__init__(model, session)
+        self.notification = notification
 
     async def _get_by_email(self, email: str):
         return await self.session.scalar(
@@ -50,28 +53,7 @@ class UserService(BaseService):
             {"email": user.email, "id": str(user.id)}
         )
 
-        await send_email_with_template(
-            recipients=[user.email],
-            subject="Verify your email",
-            context={
-                "username": user.name,
-                "verification_url": f"http://{app_settings.APP_DOMAIN}/{router_prefix}/verify?token={verify_email_token}",
-            },
-            template_name="mail_email_verify.html",
-        )
-
-        return user
-        # send_message_with_template.delay(
-        #     recipients = [user.email],
-        #     subject = "Verify your email",
-        #     context = {
-        #         "username" : user.name,
-        #         "verification_url" : f"http://{app_settings.APP_DOMAIN}/{router_prefix}/verify?token={verify_email_token}"
-        #     },
-        #     template_name = "mail_email_verify.html"
-        # )
-
-        await send_email_with_template(
+        await self.notification.send_message_with_template(
             recipients=[user.email],
             subject="Verify your email",
             context={
@@ -141,7 +123,7 @@ class UserService(BaseService):
 
         token = generate_url_safe_token({"id": str(user.id)}, salt="password-reset")
 
-        await send_email_with_template(
+        await self.notification.send_message_with_template(
             recipients=[user.email],
             subject="Reset your password",
             context={

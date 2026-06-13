@@ -8,26 +8,31 @@ from app.core.security import oauth2_delivery_partner, oauth2_seller
 from app.database.models import DeliveryPartner, Seller
 from app.database.redis import is_jti_blacklisted
 from app.database.session import get_session
+from app.services.delivery_partner import DeliveryPartnerService
+from app.services.notification_service import NotificationService
 from app.services.seller import SellerService
 from app.services.shipment import ShipmentService
-from app.services.delivery_partner import DeliveryPartnerService
 from app.services.shipment_event import ShipmentEventService
 from app.utils import decode_access_token
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 
-def get_shipment_service(session: SessionDep):
-    return ShipmentService(session, 
-                           DeliveryPartnerService(session), ShipmentEventService(session))
+def get_shipment_service(session: SessionDep, tasks: BackgroundTasks):
+    notification = NotificationService(tasks)
+    return ShipmentService(
+        session,
+        DeliveryPartnerService(session, notification),
+        ShipmentEventService(session, notification),
+    )
 
 
-def get_seller_service(session: SessionDep):
-    return SellerService(session)
+def get_seller_service(session: SessionDep, tasks: BackgroundTasks):
+    return SellerService(session, tasks)
 
 
-def get_delivery_partner_service(session: SessionDep):
-    return DeliveryPartnerService(session)
+def get_delivery_partner_service(session: SessionDep, tasks: BackgroundTasks):
+    return DeliveryPartnerService(session, tasks)
 
 
 async def _get_access_token(token: str) -> dict:

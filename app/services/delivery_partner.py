@@ -9,12 +9,13 @@ from app.api.schemas.delivery_partner import (
     UpdateDeliveryPartner,
 )
 from app.database.models import DeliveryPartner, Shipment
+from app.services.notification_service import NotificationService
 from app.services.user import UserService
 
 
 class DeliveryPartnerService(UserService):
-    def __init__(self, session: AsyncSession):
-        super().__init__(DeliveryPartner, session)
+    def __init__(self, session: AsyncSession, notification: NotificationService):
+        super().__init__(DeliveryPartner, session, notification)
 
     async def add(self, delivery_partner: CreateDeliveryPartner) -> DeliveryPartner:
         return await self._add_user(delivery_partner.model_dump(), "partner")

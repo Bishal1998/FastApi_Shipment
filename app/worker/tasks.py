@@ -55,7 +55,7 @@ def send_message_with_template(
 
 @app.task
 def send_sms(to: str, body: str):
-    client.message.create(from_=twilio_settings.PHONE_NUMBER, to=to, body=body)
+    client.messages.create(from_=twilio_settings.PHONE_NUMBER, to=to, body=body)
 
 
 async def send_email_with_template(

@@ -50,6 +50,7 @@ class NotificationSettings(BaseSettings):
     MAIL_SSL_TLS: bool = False
     USE_CREDENTIALS: bool = True
     VALIDATE_CERTS: bool = True
+    RESEND_API_KEY: str
 
     model_config = _base_config
 
